@@ -1,8 +1,4 @@
 #!/usr/bin/python
-#
-# usage from rfcat interactive shell:
-#   %run sl.py
-#   rxtpms(d)
 
 from rflib import *
 from itertools import izip
