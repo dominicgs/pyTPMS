@@ -29,7 +29,7 @@ def siemens_ook80_validate(bits, checksum):
 # Siemens VDO TPMS 80 bit OOK format
 def siemens_ook80_decode(pkt):
     try:
-        data = manchester_decode(bitstring.pack('bytes', pkt)[:160])
+        data = manchester_decode(bitstring.pack('bytes', pkt)[:152])
         print data.bin
         print "ffffffffffffffffffffiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiippppppppttttttttcccccccc"
         function, identifier, pressure, temperature, checksum = data.unpack('uint:20, uint:32, uint:8, uint:8, uint:8')
@@ -56,7 +56,7 @@ def rxook(device):
         try:
             pkt, ts = device.RFrecv()
             print "Received:  %s" % pkt.encode('hex')
-            schrader_ook37_decode(pkt)
+            siemens_ook80_decode(pkt)
         except ChipconUsbTimeoutException:
             pass
     sys.stdin.read(1)
