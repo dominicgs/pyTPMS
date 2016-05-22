@@ -15,8 +15,7 @@ def manchester_decode(symbols):
         elif dibit == '0b10':
             bits.append(1)
         else:
-#            print "invalid manchester encoding"
-            raise ValueError
+            return None
     return bitstring.BitStream(bits)
 
 def siemens_ook80_validate(bits, checksum):
@@ -25,28 +24,20 @@ def siemens_ook80_validate(bits, checksum):
     total = 0
     for word in padded_bits.cut(8, 0, padded_bits.len-8):
         total += word.int & 0xff
-    if checksum != total & 0xff:
-#        print "invalid checksum"
-        raise ValueError
+    return (checksum == total & 0xff)
 
 # Siemens VDO TPMS 80 bit OOK format
 def siemens_ook80_decode(pkt):
-    try:
-        data = manchester_decode(bitstring.pack('bytes', pkt)[:152])
-#        print data.bin
-#        print "ffffffffffffffffffffiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiippppppppttttttttcccccccc"
-        function, identifier, pressure, temperature, checksum = data.unpack('uint:20, uint:32, uint:8, uint:8, uint:8')
-#        print "function code: %05x" % function
-#        print "ID: %08x" % identifier
-#        print "pressure: %02x" % pressure
-#        print "temperature: %02x" % temperature
-#        print "checksum: %02x" % checksum
-        siemens_ook80_validate(data, checksum)
-    except:
-        return
-#    print "checksum valid"
-    pressure = pressure  * 4 / 3
-    print f.renderText("%02d" % pressure)
+    data = manchester_decode(bitstring.pack('bytes', pkt)[:152])
+    if data is None:
+	return
+    function, identifier, pressure, temperature, checksum = data.unpack('uint:20, uint:32, uint:8, uint:8, uint:8')
+    if siemens_ook80_validate(data, checksum):
+        print "function code: %05x" % function
+        print "ID: %08x" % identifier
+        print "pressure: %02x" % pressure
+        print "temperature: %02x" % temperature
+        print "checksum: %02x" % checksum
 
 def rxook(device):
     device.setFreq(315000000)
@@ -60,7 +51,6 @@ def rxook(device):
     while not keystop():
         try:
             pkt, ts = device.RFrecv()
-#            print "Received:  %s" % pkt.encode('hex')
             siemens_ook80_decode(pkt)
         except ChipconUsbTimeoutException:
             pass
