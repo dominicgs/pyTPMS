@@ -12,8 +12,7 @@ def manchester_decode(symbols):
         elif dibit == '0b10':
             bits.append(1)
         else:
-            print "invalid manchester encoding"
-            raise ValueError
+            return None
     return bitstring.BitStream(bits)
 
 def schrader_ook37_validate(bits, checksum):
@@ -21,25 +20,19 @@ def schrader_ook37_validate(bits, checksum):
     total = 0
     for word in padded_bits.cut(2, 0, padded_bits.len-2):
         total += word.int & 3
-    if checksum != 3 - (total & 3):
-        print "invalid checksum"
-        raise ValueError
+    return (checksum == 3 - (total & 3))
 
 # Schrader TPMS 37 bit OOK format
 def schrader_ook37_decode(pkt):
-    try:
-        data = manchester_decode(bitstring.pack('bytes', pkt)[:74])
-        print data.bin
-        print "fffiiiiiiiiiiiiiiiiiiiiiiiippppppppcc"
-        function, identifier, pressure, checksum = data.unpack('uint:3, uint:24, uint:8, uint:2')
+    data = manchester_decode(bitstring.pack('bytes', pkt)[:74])
+    if data is None:
+        return
+    function, identifier, pressure, checksum = data.unpack('uint:3, uint:24, uint:8, uint:2')
+    if schrader_ook37_validate(data, checksum):
         print "function code: %01x" % function
         print "ID: %06x" % identifier
         print "pressure: %02x" % pressure
         print "checksum: %01x" % checksum
-        schrader_ook37_validate(data, checksum)
-    except:
-        return
-    print "checksum valid"
 
 def rxook(device):
     device.setFreq(315052000)
@@ -53,7 +46,6 @@ def rxook(device):
     while not keystop():
         try:
             pkt, ts = device.RFrecv()
-            print "Received:  %s" % pkt.encode('hex')
             schrader_ook37_decode(pkt)
         except ChipconUsbTimeoutException:
             pass
